@@ -69,7 +69,7 @@
           <el-input v-model="form.businessType" placeholder="请输入业务类型" />
         </el-form-item>
         <el-form-item label="是否启用" prop="isActive">
-          <el-switch v-model="form.isActive" active-text="启用" inactive-text="禁用" />
+          <el-switch v-model="form.isActive" />
         </el-form-item>
         <el-form-item label="描述" prop="description">
           <el-input v-model="form.description" type="textarea" :rows="3" placeholder="请输入描述" />

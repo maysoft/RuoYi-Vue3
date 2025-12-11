@@ -108,10 +108,10 @@
           <el-input v-model="form.messageToken" placeholder="请输入消息 Token" />
         </el-form-item>
         <el-form-item label="支持支付" prop="enablePayment">
-          <el-switch v-model="form.enablePayment" active-text="开" inactive-text="关" />
+          <el-switch v-model="form.enablePayment" />
         </el-form-item>
         <el-form-item label="支持订阅消息" prop="enableSubscribeMsg">
-          <el-switch v-model="form.enableSubscribeMsg" active-text="开" inactive-text="关" />
+          <el-switch v-model="form.enableSubscribeMsg" />
         </el-form-item>
         <el-form-item label="环境" prop="environment">
           <el-input v-model="form.environment" placeholder="prod/test等" />
@@ -120,7 +120,7 @@
           <el-input v-model="form.status" placeholder="例如 normal/disabled" />
         </el-form-item>
         <el-form-item label="是否启用" prop="isActive">
-          <el-switch v-model="form.isActive" active-text="启用" inactive-text="禁用" />
+          <el-switch v-model="form.isActive" />
         </el-form-item>
       </el-form>
       <template #footer>
