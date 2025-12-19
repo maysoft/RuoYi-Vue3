@@ -1,6 +1,6 @@
 <template>
   <div class="app-container">
-    <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch" label-width="80px">
+    <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch" label-width="90px">
       <el-form-item label="关键字" prop="keyword">
         <el-input
           v-model="queryParams.keyword"
@@ -11,7 +11,7 @@
         />
       </el-form-item>
       <el-form-item label="是否启用" prop="isActive">
-        <el-select v-model="queryParams.isActive" placeholder="全部" clearable style="width: 120px">
+        <el-select v-model="queryParams.isActive" placeholder="全部" clearable style="width: 140px">
           <el-option :value="true" label="启用" />
           <el-option :value="false" label="禁用" />
         </el-select>
@@ -39,7 +39,6 @@
       <el-table-column type="selection" width="55" align="center" />
       <el-table-column label="应用编码" align="center" prop="code" />
       <el-table-column label="应用名称" align="center" prop="name" />
-      <el-table-column label="业务类型" align="center" prop="businessType" />
       <el-table-column label="启用" align="center" prop="isActive">
         <template #default="scope">
           <el-tag :type="scope.row.isActive ? 'success' : 'info'">{{ scope.row.isActive ? '是' : '否' }}</el-tag>
@@ -65,20 +64,17 @@
         <el-form-item label="应用名称" prop="name">
           <el-input v-model="form.name" placeholder="请输入应用名称" />
         </el-form-item>
-        <el-form-item label="业务类型" prop="businessType">
-          <el-input v-model="form.businessType" placeholder="请输入业务类型" />
+        <el-form-item label="描述" prop="description">
+          <el-input v-model="form.description" type="textarea" :autosize="{ minRows: 2, maxRows: 4 }" />
         </el-form-item>
         <el-form-item label="是否启用" prop="isActive">
           <el-switch v-model="form.isActive" />
         </el-form-item>
-        <el-form-item label="描述" prop="description">
-          <el-input v-model="form.description" type="textarea" :rows="3" placeholder="请输入描述" />
-        </el-form-item>
       </el-form>
       <template #footer>
         <div class="dialog-footer">
-          <el-button type="primary" @click="submitForm">确 定</el-button>
-          <el-button @click="cancel">取 消</el-button>
+          <el-button type="primary" @click="submitForm">确定</el-button>
+          <el-button @click="cancel">取消</el-button>
         </div>
       </template>
     </el-dialog>
@@ -86,18 +82,19 @@
 </template>
 
 <script setup name="MiniProgramApp">
+import { reactive, ref, toRefs, getCurrentInstance } from 'vue'
 import { listApp, getApp, addApp, updateApp, delApp } from '@/api/miniapp/app'
 
 const { proxy } = getCurrentInstance()
 
-const appList = ref([])
-const open = ref(false)
 const loading = ref(true)
+const appList = ref([])
 const showSearch = ref(true)
+const open = ref(false)
+const total = ref(0)
 const ids = ref([])
 const single = ref(true)
 const multiple = ref(true)
-const total = ref(0)
 const title = ref('')
 
 const data = reactive({
@@ -118,28 +115,25 @@ const { queryParams, form, rules } = toRefs(data)
 
 function getList() {
   loading.value = true
-  listApp(queryParams.value).then(res => {
-    appList.value = res.rows
-    total.value = res.total
-    loading.value = false
-  })
+  listApp(queryParams.value)
+    .then(res => {
+      appList.value = res.rows || []
+      total.value = res.total || 0
+    })
+    .finally(() => {
+      loading.value = false
+    })
 }
 
-function cancel() {
-  open.value = false
-  reset()
-}
-
-function reset() {
+function resetFormModel() {
   form.value = {
     appId: undefined,
-    code: undefined,
-    name: undefined,
-    businessType: undefined,
-    isActive: true,
-    description: undefined
+    code: '',
+    name: '',
+    description: '',
+    isActive: true
   }
-  proxy.resetForm('formRef')
+  proxy?.resetForm?.('formRef')
 }
 
 function handleQuery() {
@@ -159,54 +153,68 @@ function handleSelectionChange(selection) {
 }
 
 function handleAdd() {
-  reset()
+  resetFormModel()
   open.value = true
-  title.value = '添加小程序应用'
+  title.value = '新增应用'
 }
 
 function handleUpdate(row) {
-  reset()
-  const appId = row.appId || ids.value[0]
-  if (!appId) {
+  const id = row?.appId || ids.value[0]
+  if (!id) {
     proxy.$modal.msgWarning('请选择一条数据')
     return
   }
-  getApp(appId).then(res => {
-    form.value = res.data
-    form.value.appId = res.data.appId
+  resetFormModel()
+  getApp(id).then(res => {
+    const data = res.data || {}
+    form.value = {
+      appId: data.appId,
+      code: data.code,
+      name: data.name,
+      description: data.description,
+      isActive: data.isActive
+    }
     open.value = true
-    title.value = '修改小程序应用'
+    title.value = '修改应用'
   })
 }
 
 function submitForm() {
-  proxy.$refs['formRef'].validate(valid => {
-    if (valid) {
-      if (form.value.appId) {
-        updateApp(form.value.appId, form.value).then(() => {
-          proxy.$modal.msgSuccess('修改成功')
-          open.value = false
-          getList()
-        })
-      } else {
-        addApp(form.value).then(() => {
-          proxy.$modal.msgSuccess('新增成功')
-          open.value = false
-          getList()
-        })
-      }
+  proxy.$refs['formRef']?.validate(valid => {
+    if (!valid) return
+    const payload = {
+      code: form.value.code,
+      name: form.value.name,
+      description: form.value.description,
+      isActive: form.value.isActive
     }
+    const request = form.value.appId ? updateApp(form.value.appId, payload) : addApp(payload)
+    request.then(() => {
+      proxy.$modal.msgSuccess('操作成功')
+      open.value = false
+      getList()
+    })
   })
 }
 
 function handleDelete(row) {
-  const appIds = row.appId || ids.value
-  proxy.$modal.confirm('是否确认删除选中数据项？').then(function () {
-    return delApp(appIds)
-  }).then(() => {
-    getList()
-    proxy.$modal.msgSuccess('删除成功')
-  }).catch(() => {})
+  const appIds = row?.appId ? [row.appId] : ids.value
+  if (!appIds.length) {
+    proxy.$modal.msgWarning('请选择要删除的数据')
+    return
+  }
+  proxy.$modal
+    .confirm(`是否确认删除应用编号为 "${appIds.join(',')}" 的数据项？`)
+    .then(() => delApp(appIds.join(',')))
+    .then(() => {
+      getList()
+      proxy.$modal.msgSuccess('删除成功')
+    })
+}
+
+function cancel() {
+  open.value = false
+  resetFormModel()
 }
 
 getList()
