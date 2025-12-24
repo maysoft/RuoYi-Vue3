@@ -54,6 +54,29 @@
       <el-table-column label="总库存" prop="totalStock" align="center" />
       <el-table-column label="排序" prop="sort" align="center" />
       <el-table-column label="创建时间" prop="createTime" align="center" width="180" />
+      <el-table-column label="操作" align="center" width="260">
+        <template #default="scope">
+          <el-button type="primary" link @click="handleUpdate(scope.row)">编辑</el-button>
+          <el-button
+            type="success"
+            link
+            v-if="scope.row.status !== 1"
+            @click="handleToggleStatus(scope.row, 1)"
+          >
+            上架
+          </el-button>
+          <el-button
+            type="warning"
+            link
+            v-if="scope.row.status === 1"
+            @click="handleToggleStatus(scope.row, 0)"
+          >
+            下架
+          </el-button>
+          <el-button type="info" link @click="handleUpdateSort(scope.row)">调整排序</el-button>
+          <el-button type="danger" link @click="handleDelete(scope.row)">删除</el-button>
+        </template>
+      </el-table-column>
     </el-table>
 
     <pagination
@@ -214,7 +237,15 @@
 
 <script setup name="MiniProgramProduct">
 import { reactive, ref, toRefs, getCurrentInstance } from 'vue'
-import { listProduct, getProduct, addProduct, updateProduct, delProduct } from '@/api/miniapp/product'
+import {
+  listProduct,
+  getProduct,
+  addProduct,
+  updateProduct,
+  delProduct,
+  updateProductStatus,
+  updateProductSort
+} from '@/api/miniapp/product'
 import { listApp } from '@/api/miniapp/app'
 
 const { proxy } = getCurrentInstance()
@@ -431,6 +462,46 @@ function handleDelete(row) {
 function cancel() {
   open.value = false
   resetFormModel()
+}
+
+function handleToggleStatus(row, status) {
+  const id = row?.productId
+  if (!id) {
+    proxy.$modal.msgWarning('请选择一条数据')
+    return
+  }
+  const payload = {
+    status,
+    onShelfTime: row.onShelfTime,
+    offShelfTime: row.offShelfTime
+  }
+  updateProductStatus(id, payload).then(() => {
+    proxy.$modal.msgSuccess('状态已更新')
+    getList()
+  })
+}
+
+function handleUpdateSort(row) {
+  const id = row?.productId
+  if (!id) {
+    proxy.$modal.msgWarning('请选择一条数据')
+    return
+  }
+  proxy.$modal
+    .prompt('请输入新的排序权重（数字越大越靠前）', '调整排序', {
+      inputValue: row.sort ?? 0,
+      inputPattern: /^\\d+$/,
+      inputErrorMessage: '请输入非负整数'
+    })
+    .then(({ value }) => {
+      const sort = Number(value)
+      return updateProductSort(id, { sort })
+    })
+    .then(() => {
+      proxy.$modal.msgSuccess('排序已更新')
+      getList()
+    })
+    .catch(() => {})
 }
 
 loadAppOptions()

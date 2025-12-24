@@ -43,3 +43,21 @@ export function delProduct(productIds) {
     method: 'delete'
   })
 }
+
+// 上/下架
+export function updateProductStatus(productId, data) {
+  return request({
+    url: `/miniapp/product/${productId}/status`,
+    method: 'put',
+    data
+  })
+}
+
+// 调整排序
+export function updateProductSort(productId, data) {
+  return request({
+    url: `/miniapp/product/${productId}/sort`,
+    method: 'put',
+    data
+  })
+}
