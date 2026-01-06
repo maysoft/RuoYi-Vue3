@@ -41,8 +41,8 @@
 
     <el-table v-loading="loading" :data="productList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center" />
-      <el-table-column label="产品名称" prop="name" align="center" />
-      <el-table-column label="所属应用" prop="appName" align="center" />
+      <el-table-column label="产品名称" prop="name" align="left" min-width="240" show-overflow-tooltip />
+      <el-table-column label="所属应用" prop="appName" align="center" min-width="160" show-overflow-tooltip />
       <el-table-column label="售价" prop="salePrice" align="center" />
       <el-table-column label="原价" prop="originalPrice" align="center" />
       <el-table-column label="状态" prop="status" align="center" width="110">
