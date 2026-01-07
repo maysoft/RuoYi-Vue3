@@ -7,13 +7,7 @@
         </el-select>
       </el-form-item>
       <el-form-item label="关键字" prop="keyword">
-        <el-input
-          v-model="queryParams.keyword"
-          placeholder="按产品名称模糊搜索"
-          clearable
-          style="width: 220px"
-          @keyup.enter="handleQuery"
-        />
+        <el-input v-model="queryParams.keyword" placeholder="按产品名称模糊搜索" clearable style="width: 220px" @keyup.enter="handleQuery" />
       </el-form-item>
       <el-form-item label="状态" prop="status">
         <el-select v-model="queryParams.status" placeholder="全部" clearable style="width: 140px">
@@ -50,42 +44,22 @@
           <el-tag :type="scope.row.status === 1 ? 'success' : 'info'">{{ renderStatus(scope.row.status) }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="SKU 数量" prop="skuCount" align="center" />
+      <el-table-column label="SKU数量" prop="skuCount" align="center" />
       <el-table-column label="总库存" prop="totalStock" align="center" />
       <el-table-column label="排序" prop="sort" align="center" />
       <el-table-column label="创建时间" prop="createTime" align="center" width="180" />
       <el-table-column label="操作" align="center" width="260">
         <template #default="scope">
           <el-button type="primary" link @click="handleUpdate(scope.row)">编辑</el-button>
-          <el-button
-            type="success"
-            link
-            v-if="scope.row.status !== 1"
-            @click="handleToggleStatus(scope.row, 1)"
-          >
-            上架
-          </el-button>
-          <el-button
-            type="warning"
-            link
-            v-if="scope.row.status === 1"
-            @click="handleToggleStatus(scope.row, 0)"
-          >
-            下架
-          </el-button>
+          <el-button type="success" link v-if="scope.row.status !== 1" @click="handleToggleStatus(scope.row, 1)">上架</el-button>
+          <el-button type="warning" link v-if="scope.row.status === 1" @click="handleToggleStatus(scope.row, 0)">下架</el-button>
           <el-button type="info" link @click="handleUpdateSort(scope.row)">调整排序</el-button>
           <el-button type="danger" link @click="handleDelete(scope.row)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
 
-    <pagination
-      v-show="total > 0"
-      :total="total"
-      v-model:page="queryParams.pageNum"
-      v-model:limit="queryParams.pageSize"
-      @pagination="getList"
-    />
+    <pagination v-show="total > 0" :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
 
     <el-dialog :title="title" v-model="open" width="980px" append-to-body>
       <el-form ref="formRef" :model="form" :rules="rules" label-width="110px">
@@ -103,6 +77,7 @@
             </el-form-item>
           </el-col>
         </el-row>
+
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="售价" prop="salePrice">
@@ -115,6 +90,7 @@
             </el-form-item>
           </el-col>
         </el-row>
+
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="状态" prop="status">
@@ -129,6 +105,7 @@
             </el-form-item>
           </el-col>
         </el-row>
+
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="销售量" prop="salesVolume">
@@ -141,61 +118,50 @@
             </el-form-item>
           </el-col>
         </el-row>
+
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="上架时间" prop="onShelfTime">
-              <el-date-picker
-                v-model="form.onShelfTime"
-                type="datetime"
-                value-format="YYYY-MM-DD HH:mm:ss"
-                placeholder="选择上架时间"
-                style="width: 100%"
-              />
+              <el-date-picker v-model="form.onShelfTime" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="选择上架时间" style="width: 100%" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="下架时间" prop="offShelfTime">
-              <el-date-picker
-                v-model="form.offShelfTime"
-                type="datetime"
-                value-format="YYYY-MM-DD HH:mm:ss"
-                placeholder="选择下架时间"
-                style="width: 100%"
-              />
+              <el-date-picker v-model="form.offShelfTime" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="选择下架时间" style="width: 100%" />
             </el-form-item>
           </el-col>
         </el-row>
+
         <el-form-item label="封面图" prop="coverImage">
           <el-input v-model="form.coverImage" placeholder="封面图片地址" />
         </el-form-item>
         <el-form-item label="图集" prop="gallery">
+          <el-input v-model="form.gallery" type="textarea" placeholder="可存储多个图片地址，逗号分隔或 JSON" :autosize="{ minRows: 2, maxRows: 4 }" />
+        </el-form-item>
+        <el-form-item label="扩展(JSON)" prop="specJson">
           <el-input
-            v-model="form.gallery"
+            v-model="form.specJson"
             type="textarea"
-            placeholder="可存储多个图片地址，逗号分隔或 JSON"
-            :autosize="{ minRows: 2, maxRows: 4 }"
+            placeholder='例如：{"sizeMm":{"width":25,"height":35},"sizePx":{"width":295,"height":413},"dpi":300}'
+            :autosize="{ minRows: 2, maxRows: 5 }"
           />
         </el-form-item>
         <el-form-item label="产品描述" prop="description">
-          <el-input
-            v-model="form.description"
-            type="textarea"
-            placeholder="请输入产品描述"
-            :autosize="{ minRows: 3, maxRows: 6 }"
-          />
+          <el-input v-model="form.description" type="textarea" placeholder="请输入产品描述" :autosize="{ minRows: 3, maxRows: 6 }" />
         </el-form-item>
 
         <el-divider content-position="left">SKU 列表</el-divider>
         <el-button type="primary" plain icon="Plus" size="small" @click="handleAddSku">新增 SKU</el-button>
+
         <el-table :data="form.skus" style="width: 100%; margin-top: 10px">
-          <el-table-column label="SKU 编码" width="140">
+          <el-table-column label="SKU 编码" width="180">
             <template #default="scope">
               <el-input v-model="scope.row.skuCode" placeholder="必填" />
             </template>
           </el-table-column>
-          <el-table-column label="规格(JSON)" width="200">
+          <el-table-column label="规格(JSON)" min-width="240">
             <template #default="scope">
-              <el-input v-model="scope.row.specJson" placeholder='如 {"颜色":"红"}' />
+              <el-input v-model="scope.row.specJson" type="textarea" :autosize="{ minRows: 1, maxRows: 3 }" placeholder='例如：{"service":{"code":"multi","name":"保存7种底色"}}' />
             </template>
           </el-table-column>
           <el-table-column label="售价" width="120" align="center">
@@ -237,15 +203,7 @@
 
 <script setup name="MiniProgramProduct">
 import { reactive, ref, toRefs, getCurrentInstance } from 'vue'
-import {
-  listProduct,
-  getProduct,
-  addProduct,
-  updateProduct,
-  delProduct,
-  updateProductStatus,
-  updateProductSort
-} from '@/api/miniapp/product'
+import { listProduct, getProduct, addProduct, updateProduct, delProduct, updateProductStatus, updateProductSort } from '@/api/miniapp/product'
 import { listApp } from '@/api/miniapp/app'
 
 const { proxy } = getCurrentInstance()
@@ -314,6 +272,7 @@ function resetFormModel() {
     appId: undefined,
     name: '',
     description: '',
+    specJson: '',
     categoryId: undefined,
     originalPrice: 0,
     salePrice: 0,
@@ -365,6 +324,7 @@ function handleUpdate(row) {
       appId: data.appId,
       name: data.name,
       description: data.description,
+      specJson: data.specJson || '',
       categoryId: data.categoryId,
       originalPrice: data.originalPrice,
       salePrice: data.salePrice,
@@ -375,15 +335,15 @@ function handleUpdate(row) {
       sort: data.sort,
       onShelfTime: data.onShelfTime,
       offShelfTime: data.offShelfTime,
-      skus: (data.skus || []).map(x => ({
-        skuId: x.skuId,
-        skuCode: x.skuCode,
-        specJson: x.specJson,
-        originalPrice: x.originalPrice,
-        salePrice: x.salePrice,
-        stock: x.stock,
-        barcode: x.barcode
-      }))
+       skus: (data.skus || []).map(x => ({
+         skuId: x.skuId,
+         skuCode: x.skuCode,
+         specJson: x.specJson,
+         originalPrice: x.originalPrice,
+         salePrice: x.salePrice,
+         stock: x.stock,
+         barcode: x.barcode
+       }))
     }
     open.value = true
     title.value = '修改产品'
@@ -414,6 +374,7 @@ function submitForm() {
       appId: form.value.appId,
       name: form.value.name,
       description: form.value.description,
+      specJson: form.value.specJson,
       categoryId: form.value.categoryId,
       originalPrice: form.value.originalPrice,
       salePrice: form.value.salePrice,
@@ -451,7 +412,7 @@ function handleDelete(row) {
     return
   }
   proxy.$modal
-    .confirm(`是否确认删除产品编号为 "${productIds.join(',')}" 的数据项？`)
+    .confirm(`是否确认删除产品编号为"${productIds.join(',')}"的数据项？`)
     .then(() => delProduct(productIds.join(',')))
     .then(() => {
       getList()
