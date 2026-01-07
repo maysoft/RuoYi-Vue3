@@ -138,13 +138,40 @@
         <el-form-item label="图集" prop="gallery">
           <el-input v-model="form.gallery" type="textarea" placeholder="可存储多个图片地址，逗号分隔或 JSON" :autosize="{ minRows: 2, maxRows: 4 }" />
         </el-form-item>
-        <el-form-item label="扩展(JSON)" prop="specJson">
-          <el-input
-            v-model="form.specJson"
-            type="textarea"
-            placeholder='例如：{"sizeMm":{"width":25,"height":35},"sizePx":{"width":295,"height":413},"dpi":300}'
-            :autosize="{ minRows: 2, maxRows: 5 }"
-          />
+        <el-form-item label="扩展属性" prop="specJson">
+          <div style="width: 100%">
+            <div style="display: flex; gap: 8px; margin-bottom: 8px">
+              <el-button type="primary" plain icon="Plus" size="small" @click="handleAddSpecKv">新增属性</el-button>
+              <el-button type="danger" plain size="small" @click="handleClearSpecKv">清空</el-button>
+            </div>
+
+            <el-table :data="specKvRows" border size="small" style="width: 100%">
+              <el-table-column label="Key" min-width="180">
+                <template #default="scope">
+                  <el-input v-model="scope.row.key" placeholder="例如：dpi" />
+                </template>
+              </el-table-column>
+              <el-table-column label="Value" min-width="260">
+                <template #default="scope">
+                  <el-input v-model="scope.row.value" placeholder='例如：300 / true / {"w":295,"h":413}' />
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="90" align="center">
+                <template #default="scope">
+                  <el-button link type="danger" @click="handleRemoveSpecKv(scope.$index)">移除</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+
+            <el-input
+              v-model="form.specJson"
+              type="textarea"
+              readonly
+              placeholder="spec_json 预览（由上面键值对自动生成）"
+              :autosize="{ minRows: 2, maxRows: 5 }"
+              style="margin-top: 8px"
+            />
+          </div>
         </el-form-item>
         <el-form-item label="产品描述" prop="description">
           <el-input v-model="form.description" type="textarea" placeholder="请输入产品描述" :autosize="{ minRows: 3, maxRows: 6 }" />
@@ -202,7 +229,7 @@
 </template>
 
 <script setup name="MiniProgramProduct">
-import { reactive, ref, toRefs, getCurrentInstance } from 'vue'
+import { reactive, ref, toRefs, getCurrentInstance, watch } from 'vue'
 import { listProduct, getProduct, addProduct, updateProduct, delProduct, updateProductStatus, updateProductSort } from '@/api/miniapp/product'
 import { listApp } from '@/api/miniapp/app'
 
@@ -223,6 +250,9 @@ const statusOptions = [
   { label: '上架', value: 1 },
   { label: '下架', value: 0 }
 ]
+
+const specKvRows = ref([{ key: '', value: '' }])
+const specKvSyncing = ref(false)
 
 const data = reactive({
   form: {},
@@ -252,6 +282,82 @@ function loadAppOptions() {
   listApp({ pageNum: 1, pageSize: 1000 }).then(res => {
     appOptions.value = res.rows || []
   })
+}
+
+function syncSpecJsonFromKv() {
+  const obj = {}
+  for (const row of specKvRows.value || []) {
+    const key = String(row?.key || '').trim()
+    if (!key) continue
+    const rawValue = String(row?.value ?? '')
+    obj[key] = tryParseSpecValue(rawValue)
+  }
+
+  const hasAny = Object.keys(obj).length > 0
+  form.value.specJson = hasAny ? JSON.stringify(obj) : ''
+}
+
+function syncSpecKvFromSpecJson(specJson) {
+  specKvSyncing.value = true
+  try {
+    const raw = String(specJson || '').trim()
+    if (!raw) {
+      specKvRows.value = [{ key: '', value: '' }]
+      return
+    }
+
+    const parsed = JSON.parse(raw)
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      specKvRows.value = [{ key: '', value: '' }]
+      return
+    }
+
+    const entries = Object.entries(parsed)
+    specKvRows.value = entries.length
+      ? entries.map(([key, value]) => ({ key, value: formatSpecValue(value) }))
+      : [{ key: '', value: '' }]
+  } catch {
+    specKvRows.value = [{ key: '', value: '' }]
+  } finally {
+    specKvSyncing.value = false
+  }
+}
+
+function tryParseSpecValue(rawValue) {
+  const text = String(rawValue ?? '').trim()
+  if (!text) return ''
+
+  if (text === 'true') return true
+  if (text === 'false') return false
+  if (text === 'null') return null
+
+  if (/^[+-]?\d+(\.\d+)?$/.test(text)) {
+    const num = Number(text)
+    if (!Number.isNaN(num)) return num
+  }
+
+  const looksLikeJson =
+    (text.startsWith('{') && text.endsWith('}')) || (text.startsWith('[') && text.endsWith(']'))
+  if (looksLikeJson) {
+    try {
+      return JSON.parse(text)
+    } catch {
+      return rawValue
+    }
+  }
+
+  return rawValue
+}
+
+function formatSpecValue(value) {
+  if (value == null) return 'null'
+  if (typeof value === 'string') return value
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return String(value)
+  }
 }
 
 function getList() {
@@ -285,6 +391,7 @@ function resetFormModel() {
     offShelfTime: '',
     skus: []
   }
+  syncSpecKvFromSpecJson(form.value.specJson)
   proxy?.resetForm?.('formRef')
 }
 
@@ -345,9 +452,27 @@ function handleUpdate(row) {
          barcode: x.barcode
        }))
     }
+    syncSpecKvFromSpecJson(form.value.specJson)
     open.value = true
     title.value = '修改产品'
   })
+}
+
+function handleAddSpecKv() {
+  specKvRows.value = specKvRows.value || []
+  specKvRows.value.push({ key: '', value: '' })
+}
+
+function handleRemoveSpecKv(index) {
+  specKvRows.value.splice(index, 1)
+  if (!specKvRows.value.length) {
+    specKvRows.value.push({ key: '', value: '' })
+  }
+}
+
+function handleClearSpecKv() {
+  specKvRows.value = [{ key: '', value: '' }]
+  form.value.specJson = ''
 }
 
 function handleAddSku() {
@@ -366,6 +491,15 @@ function handleAddSku() {
 function handleRemoveSku(index) {
   form.value.skus.splice(index, 1)
 }
+
+watch(
+  specKvRows,
+  () => {
+    if (specKvSyncing.value) return
+    syncSpecJsonFromKv()
+  },
+  { deep: true }
+)
 
 function submitForm() {
   proxy.$refs['formRef']?.validate(valid => {
