@@ -203,7 +203,13 @@ async function fetchApps() {
 
 async function fetchPlatforms(appId) {
   if (!appId) {
-    platformOptions.value = []
+    // 未选择应用时，默认拉取全部平台实例，便于直接筛选
+    const res = await listPlatform({ pageNum: 1, pageSize: 1000 })
+    const rows = res.rows || []
+    platformOptions.value = rows.map(x => ({
+      platformInstanceId: x.platformInstanceId,
+      label: x.platformType || x.platformInstanceId
+    }))
     return
   }
   const res = await listPlatform({ pageNum: 1, pageSize: 1000, appId })
@@ -279,16 +285,14 @@ async function submitStatus() {
 }
 
 fetchApps().then(() => {
-  if (queryParams.value.appId) {
-    fetchPlatforms(queryParams.value.appId)
-  }
+  fetchPlatforms(queryParams.value.appId)
 })
 
 getList()
 
 watch(() => queryParams.value.appId, (val) => {
   if (!val) {
-    platformOptions.value = []
+    fetchPlatforms(undefined)
   }
 })
 </script>
