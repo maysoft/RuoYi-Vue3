@@ -16,12 +16,12 @@
       </el-form-item>
       <el-form-item label="订单状态" prop="orderStatus">
         <el-select v-model="queryParams.orderStatus" placeholder="全部" clearable style="width: 160px">
-          <el-option v-for="item in orderStatusOptions" :key="item.value" :value="item.value" :label="item.label" />
+          <el-option v-for="item in mp_order_status" :key="item.value" :value="Number(item.value)" :label="item.label" />
         </el-select>
       </el-form-item>
       <el-form-item label="支付状态" prop="payStatus">
         <el-select v-model="queryParams.payStatus" placeholder="全部" clearable style="width: 160px">
-          <el-option v-for="item in payStatusOptions" :key="item.value" :value="item.value" :label="item.label" />
+          <el-option v-for="item in mp_pay_status" :key="item.value" :value="Number(item.value)" :label="item.label" />
         </el-select>
       </el-form-item>
       <el-form-item label="创建时间">
@@ -54,12 +54,12 @@
       <el-table-column label="金额" prop="amount" width="100" align="center" />
       <el-table-column label="支付状态" prop="payStatus" width="120" align="center">
         <template #default="scope">
-          <el-tag :type="renderPayStatusType(scope.row.payStatus)">{{ scope.row.payStatus || '-' }}</el-tag>
+          <dict-tag :options="mp_pay_status" :value="scope.row.payStatus" />
         </template>
       </el-table-column>
       <el-table-column label="订单状态" prop="orderStatus" width="120" align="center">
         <template #default="scope">
-          <el-tag :type="renderOrderStatusType(scope.row.orderStatus)">{{ scope.row.orderStatus || '-' }}</el-tag>
+          <dict-tag :options="mp_order_status" :value="scope.row.orderStatus" />
         </template>
       </el-table-column>
       <el-table-column label="支付时间" prop="payTime" width="170" align="center" />
@@ -84,8 +84,12 @@
         <el-descriptions-item label="用户OpenId">{{ detail.openId || '-' }}</el-descriptions-item>
         <el-descriptions-item label="商品">{{ detail.productName || detail.productId }}</el-descriptions-item>
         <el-descriptions-item label="金额">{{ detail.amount }}</el-descriptions-item>
-        <el-descriptions-item label="支付状态">{{ detail.payStatus || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="订单状态">{{ detail.orderStatus || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="支付状态">
+          <dict-tag :options="mp_pay_status" :value="detail.payStatus" />
+        </el-descriptions-item>
+        <el-descriptions-item label="订单状态">
+          <dict-tag :options="mp_order_status" :value="detail.orderStatus" />
+        </el-descriptions-item>
         <el-descriptions-item label="支付时间">{{ detail.payTime || '-' }}</el-descriptions-item>
         <el-descriptions-item label="创建时间">{{ detail.createTime || '-' }}</el-descriptions-item>
       </el-descriptions>
@@ -119,12 +123,12 @@
       <el-form ref="statusFormRef" :model="statusForm" label-width="110px">
         <el-form-item label="订单状态">
           <el-select v-model="statusForm.orderStatus" placeholder="不修改" clearable style="width: 320px">
-            <el-option v-for="item in orderStatusOptions" :key="item.value" :value="item.value" :label="item.label" />
+            <el-option v-for="item in mp_order_status" :key="item.value" :value="Number(item.value)" :label="item.label" />
           </el-select>
         </el-form-item>
         <el-form-item label="支付状态">
           <el-select v-model="statusForm.payStatus" placeholder="不修改" clearable style="width: 320px">
-            <el-option v-for="item in payStatusOptions" :key="item.value" :value="item.value" :label="item.label" />
+            <el-option v-for="item in mp_pay_status" :key="item.value" :value="Number(item.value)" :label="item.label" />
           </el-select>
         </el-form-item>
         <el-form-item label="交易号">
@@ -152,6 +156,7 @@ import { listPlatform } from '@/api/miniapp/platform'
 import { addDateRange } from '@/utils/ruoyi'
 
 const { proxy } = getCurrentInstance()
+const { mp_order_status, mp_pay_status } = proxy.useDict('mp_order_status', 'mp_pay_status')
 
 const loading = ref(true)
 const orderList = ref([])
@@ -169,19 +174,7 @@ const detail = ref(null)
 
 const statusOpen = ref(false)
 const statusFormRef = ref()
-const statusForm = ref({ orderId: '', orderStatus: '', payStatus: '', transactionId: '', payTime: '' })
-
-const orderStatusOptions = [
-  { label: '已创建', value: 'Created' },
-  { label: '已完成', value: 'Completed' },
-  { label: '已取消', value: 'Cancelled' }
-]
-
-const payStatusOptions = [
-  { label: '待支付', value: 'Pending' },
-  { label: '已支付', value: 'Paid' },
-  { label: '失败', value: 'Failed' }
-]
+const statusForm = ref({ orderId: '', orderStatus: null, payStatus: null, transactionId: '', payTime: '' })
 
 const data = reactive({
   queryParams: {
@@ -198,20 +191,9 @@ const data = reactive({
 
 const { queryParams } = toRefs(data)
 
-function renderPayStatusType(value) {
-  if (!value) return 'info'
-  if (value === 'Paid') return 'success'
-  if (value === 'Pending') return 'warning'
-  if (value === 'Failed') return 'danger'
-  return 'info'
-}
-
-function renderOrderStatusType(value) {
-  if (!value) return 'info'
-  if (value === 'Completed') return 'success'
-  if (value === 'Created') return 'warning'
-  if (value === 'Cancelled') return 'info'
-  return 'info'
+function normalizeOptionalInt(value) {
+  if (value === undefined || value === null || value === '') return null
+  return value
 }
 
 async function fetchApps() {
@@ -275,8 +257,8 @@ async function handleView(row) {
 function handleEditStatus(row) {
   statusForm.value = {
     orderId: row.orderId,
-    orderStatus: row.orderStatus || '',
-    payStatus: row.payStatus || '',
+    orderStatus: row.orderStatus ?? null,
+    payStatus: row.payStatus ?? null,
     transactionId: row.transactionId || '',
     payTime: row.payTime || ''
   }
@@ -285,9 +267,9 @@ function handleEditStatus(row) {
 
 async function submitStatus() {
   const payload = {
-    orderStatus: statusForm.value.orderStatus || null,
-    payStatus: statusForm.value.payStatus || null,
-    transactionId: statusForm.value.transactionId || null,
+    orderStatus: normalizeOptionalInt(statusForm.value.orderStatus),
+    payStatus: normalizeOptionalInt(statusForm.value.payStatus),
+    transactionId: statusForm.value.transactionId ? statusForm.value.transactionId.trim() : null,
     payTime: statusForm.value.payTime || null
   }
   await updateOrderStatus(statusForm.value.orderId, payload)
@@ -317,4 +299,3 @@ watch(() => queryParams.value.appId, (val) => {
   padding: 6px 0;
 }
 </style>
-
